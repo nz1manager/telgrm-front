@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lucky Jet Live</title>
+    <style>
+        body {
+            background-color: #0b141a;
+            color: #ffffff;
+            font-family: 'Arial Black', sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #coeff {
+            font-size: 110px; /* Katta va aniq */
+            letter-spacing: -3px;
+            transition: color 0.01s; /* Shartta almashish uchun juda kichik vaqt */
+            color: #444; /* Boshlang'ich rang */
+        }
+
+        /* O'yin holatlari - Siz aytgan ranglar */
+        .playing { color: #00ff00 !important; text-shadow: 0 0 25px rgba(0, 255, 0, 0.4); } 
+        .crashed { color: #ff0000 !important; text-shadow: 0 0 25px rgba(255, 0, 0, 0.4); }
+    </style>
+</head>
+<body>
+
+    <div id="coeff">0.00x</div>
+
+    <script>
+        const display = document.getElementById('coeff');
+        
+        // SIZNING RENDER BACKEND LINKINGIZ (wss:// bilan)
+        const BACKEND_URL = 'wss://telgrm-back.onrender.com'; 
+        
+        let socket;
+
+        function connect() {
+            // WebSocket ulanishini ochamiz
+            socket = new WebSocket(BACKEND_URL);
+
+            socket.onopen = () => {
+                console.log("Backend bilan aloqa o'rnatildi ✅");
+                display.innerText = "STARTING...";
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const response = JSON.parse(event.data);
+
+                    // JSON ichidan millisekundlarda keladigan ma'lumotni sug'urib olamiz
+                    if (response.push && response.push.pub && response.push.pub.data) {
+                        const gameData = response.push.pub.data;
+
+                        // 1. O'yin ketyapti (changeCoefficient)
+                        if (gameData.eventType === "changeCoefficient") {
+                            const val = gameData.current[0];
+                            
+                            // Millisekundlik yangilanish (eng tezkor usul)
+                            display.innerText = val.toFixed(2) + "x";
+                            display.className = "playing"; 
+                        } 
+                        
+                        // 2. O'yin to'xtadi (stopCoefficient)
+                        else if (gameData.eventType === "stopCoefficient") {
+                            const final = gameData.finalValue;
+                            
+                            // Birdaniga qizil rang va final raqam
+                            display.innerText = final.toFixed(2) + "x";
+                            display.className = "crashed";
+                        }
+                    }
+                } catch (e) {
+                    // Xato JSON bo'lsa indamaymiz (tezlik uchun)
+                }
+            };
+
+            socket.onclose = () => {
+                display.innerText = "WAITING...";
+                display.className = "";
+                // Uzilib qolsa darhol qayta ulanish (0.5 sek)
+                setTimeout(connect, 500); 
+            };
+
+            socket.onerror = (err) => {
+                console.error("Ulanishda xato:", err);
+            };
+        }
+
+        // Ishga tushirish
+        connect();
+    </script>
+</body>
+</html>
