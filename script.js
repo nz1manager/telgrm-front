@@ -3,26 +3,36 @@ const socket = new WebSocket('ws://localhost:3000');
 
 const display = document.getElementById('coefficient-number');
 
-socket.onmessage = function(event) {
-    const raw = event.data;
+let frameRequested = false;
+const display = document.getElementById('coefficient-number');
 
-    // 1. Agar xabarda "next" bo'lsa, JSON.parse qilmasdan raqamni qidiramiz
-    if (raw.includes('"next":[')) {
-        // "next":[1.56] formatidan raqamni qirqib olish (Eng tezkor usul)
-        const parts = raw.split('"next":[');
-        if (parts[1]) {
-            const val = parts[1].split(']')[0];
-            display.textContent = parseFloat(val).toFixed(2) + "x";
-            display.style.color = "white";
+socket.onmessage = function(event) {
+    // 1. Agar brauzer hali oldingi kadrni chizib ulgurmagan bo'lsa, kutib turadi
+    if (frameRequested) return;
+    frameRequested = true;
+
+    requestAnimationFrame(() => {
+        const raw = event.data;
+
+        // 2. TEZKOR QIDIRUV: JSON.parse ishlatmasdan raqamni topish
+        if (raw.indexOf('"next":[') !== -1) {
+            const parts = raw.split('"next":[');
+            if (parts[1]) {
+                const val = parts[1].split(']')[0];
+                display.textContent = val + "x"; // parseFloat ham vaqt oladi, shunchaki stringni chiqaramiz
+                display.style.color = "white";
+            }
+        } 
+        // 3. STOP: O'yin to'xtaganini ilib olish
+        else if (raw.indexOf('stopCoefficient') !== -1) {
+            const parts = raw.split('"finalValue":');
+            if (parts[1]) {
+                const val = parts[1].split('}')[0];
+                display.textContent = val + "x";
+                display.style.color = "#ff0000"; // Qizil
+            }
         }
-    } 
-    // 2. To'xtash xabari kelsa, darhol qizil qilish
-    else if (raw.includes('stopCoefficient')) {
-        const parts = raw.split('"finalValue":');
-        if (parts[1]) {
-            const val = parts[1].split('}')[0];
-            display.textContent = parseFloat(val).toFixed(2) + "x";
-            display.style.color = "red";
-        }
-    }
+
+        frameRequested = false;
+    });
 };
