@@ -1,42 +1,39 @@
+const display = document.getElementById('coefficient-number');
 const socket = new WebSocket('wss://rulsz.onrender.com/ws');
 
-const display = document.getElementById('coefficient-number');
-
-socket.onopen = () => {
-    console.log("✅ Render WebSocket ulanishi muvaffaqiyatli!");
-};
+// Browser renderingni tezlashtirish uchun pre-define
+let lastValue = "";
 
 socket.onmessage = function(event) {
-    console.log("📩 Ma'lumot keldi:", event.data); // Kelayotgan xabarni konsolda ko'rish
+    // 1. Eng tezkor usul: Ma'lumotni string ko'rinishida tekshirish (Parsingdan oldin)
+    const raw = event.data;
     
-    try {
-        const rawData = JSON.parse(event.data);
-        
-        // Agar ma'lumot Centrifuge formatida bo'lsa
-        if (rawData.pub && rawData.pub.data) {
-            const payload = rawData.pub.data;
+    // Millisekund yutish: JSON.parse qilishdan oldin string ichidan qidiramiz
+    if (raw.indexOf('changeCoefficient') !== -1) {
+        try {
+            const data = JSON.parse(raw).pub.data;
+            const val = data.next[0].toFixed(2) + "x";
             
-            if (payload.eventType === "changeCoefficient") {
-                display.innerText = payload.next[0].toFixed(2) + "x";
+            // DOM-ga faqat qiymat o'zgarsa yozamiz (CPU tejash)
+            if (lastValue !== val) {
+                display.textContent = val; 
                 display.style.color = "white";
-            } 
-            else if (payload.eventType === "stopCoefficient") {
-                display.innerText = payload.finalValue.toFixed(2) + "x";
-                display.style.color = "red";
-                setTimeout(() => { display.style.color = "white"; }, 2000);
+                lastValue = val;
             }
-        } else {
-            console.warn("⚠️ Noma'lum formatdagi ma'lumot:", rawData);
-        }
-    } catch (e) {
-        console.error("❌ JSON parsing xatosi:", e);
+        } catch (e) {}
+    } 
+    else if (raw.indexOf('stopCoefficient') !== -1) {
+        try {
+            const data = JSON.parse(raw).pub.data;
+            display.textContent = data.finalValue.toFixed(2) + "x";
+            display.style.color = "#ff4444"; // Qizil
+        } catch (e) {}
     }
 };
 
-socket.onerror = (error) => {
-    console.error("❌ WebSocket xatosi:", error);
-};
-
-socket.onclose = () => {
-    console.warn("🔌 Render bilan aloqa uzildi!");
-};
+// Heartbeat (Ulanish uzilib qolmasligi uchun)
+setInterval(() => {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send('{"type":1}'); // Centrifuge ping formati
+    }
+}, 20000);
