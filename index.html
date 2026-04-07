@@ -15,12 +15,10 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        #coefficient-number {
-            font-size: 120px; /* Katta va aniq raqam */
-            font-weight: bold;
-            color: white;
-            transition: color 0.1s ease; /* Rang o'zgarishi silliq bo'lishi uchun */
-        }
+       #coefficient-number {
+    will-change: contents, color; /* Brauzerni oldindan tayyorlaydi */
+    transform: translateZ(0);    /* GPU tezlatgichni yoqadi */
+}
     </style>
 </head>
 <body>
