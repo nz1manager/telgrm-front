@@ -1,39 +1,32 @@
 const display = document.getElementById('coefficient-number');
-const socket = new WebSocket('wss://rulsz.onrender.com/ws');
+// Localhost yoki VPS server manzili
+const socket = new WebSocket('ws://localhost:3000'); 
 
-// Browser renderingni tezlashtirish uchun pre-define
-let lastValue = "";
+socket.onmessage = (event) => {
+    // 1. JSON.parse() ni faqat bir marta chaqiramiz
+    const msg = JSON.parse(event.data);
+    const data = msg.push?.pub?.data;
 
-socket.onmessage = function(event) {
-    // 1. Eng tezkor usul: Ma'lumotni string ko'rinishida tekshirish (Parsingdan oldin)
-    const raw = event.data;
-    
-    // Millisekund yutish: JSON.parse qilishdan oldin string ichidan qidiramiz
-    if (raw.indexOf('changeCoefficient') !== -1) {
-        try {
-            const data = JSON.parse(raw).pub.data;
-            const val = data.next[0].toFixed(2) + "x";
-            
-            // DOM-ga faqat qiymat o'zgarsa yozamiz (CPU tejash)
-            if (lastValue !== val) {
-                display.textContent = val; 
-                display.style.color = "white";
-                lastValue = val;
-            }
-        } catch (e) {}
-    } 
-    else if (raw.indexOf('stopCoefficient') !== -1) {
-        try {
-            const data = JSON.parse(raw).pub.data;
+    if (!data) return;
+
+    // 2. EventType ni tekshirish (Switch ishlatish tezroq)
+    switch (data.eventType) {
+        case "changeCoefficient":
+            // "next" dagi qiymatni chiqarish - bu sizga bir necha millisekund yutuq beradi
+            display.textContent = data.next[0].toFixed(2) + "x";
+            display.style.color = "white";
+            break;
+
+        case "stopCoefficient":
             display.textContent = data.finalValue.toFixed(2) + "x";
-            display.style.color = "#ff4444"; // Qizil
-        } catch (e) {}
+            display.style.color = "#ff0000"; // Qizil
+            break;
+
+        case "changeState":
+            if (data.state === "waiting") {
+                display.textContent = "0.00x";
+                display.style.color = "#aaaaaa"; // Kutish holati rangi
+            }
+            break;
     }
 };
-
-// Heartbeat (Ulanish uzilib qolmasligi uchun)
-setInterval(() => {
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send('{"type":1}'); // Centrifuge ping formati
-    }
-}, 20000);
