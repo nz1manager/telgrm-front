@@ -1,32 +1,25 @@
+// Localhost:3000 ga ulanamiz (o'zimizning backend serverga)
+const socket = new WebSocket('ws://localhost:3000');
+
 const display = document.getElementById('coefficient-number');
-// Localhost yoki VPS server manzili
-const socket = new WebSocket('ws://localhost:3000'); 
 
-socket.onmessage = (event) => {
-    // 1. JSON.parse() ni faqat bir marta chaqiramiz
-    const msg = JSON.parse(event.data);
-    const data = msg.push?.pub?.data;
+socket.onmessage = function(event) {
+    try {
+        const rawData = JSON.parse(event.data);
+        const payload = rawData.push?.pub?.data;
 
-    if (!data) return;
+        if (!payload) return;
 
-    // 2. EventType ni tekshirish (Switch ishlatish tezroq)
-    switch (data.eventType) {
-        case "changeCoefficient":
-            // "next" dagi qiymatni chiqarish - bu sizga bir necha millisekund yutuq beradi
-            display.textContent = data.next[0].toFixed(2) + "x";
+        if (payload.eventType === "changeCoefficient") {
+            // "next" ni ko'rsatish tezroq natija beradi
+            display.textContent = payload.next[0].toFixed(2) + "x";
             display.style.color = "white";
-            break;
-
-        case "stopCoefficient":
-            display.textContent = data.finalValue.toFixed(2) + "x";
-            display.style.color = "#ff0000"; // Qizil
-            break;
-
-        case "changeState":
-            if (data.state === "waiting") {
-                display.textContent = "0.00x";
-                display.style.color = "#aaaaaa"; // Kutish holati rangi
-            }
-            break;
+        } 
+        else if (payload.eventType === "stopCoefficient") {
+            display.textContent = payload.finalValue.toFixed(2) + "x";
+            display.style.color = "red";
+        }
+    } catch (e) {
+        // Xato bo'lsa indamaymiz (tezlik uchun)
     }
 };
