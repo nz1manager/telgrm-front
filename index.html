@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Jet AI Monitor</title>
+    <title>Dynamic Jet Monitor</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="history-bar" class="history-container"></div>
+    <div class="app-container">
+        <div id="history-wrapper" class="history-bar"></div>
 
-    <div class="main-layout">
-        <div class="current-game">
-            <div class="label">JORIY KOEFFITSIYENT</div>
-            <div id="coefficient-number">0.00x</div>
-            <div id="game-state">Kutilmoqda...</div>
-        </div>
-
-        <div class="analysis-panel">
-            <div class="analysis-card">
-                <div class="label">AI BASHORAT (ESTIMATED)</div>
-                <div id="ai-prediction">--.--x</div>
+        <div class="main-display">
+            <div id="counter-wrapper" class="counter-box">
+                <span id="coefficient-number">1.00x</span>
+                <div id="status-label">READY</div>
             </div>
-            <div class="analysis-card">
-                <div class="label">G'ALABA EHTIMOLLIĞI</div>
-                <div id="win-probability">0%</div>
+
+            <div class="side-panel">
+                <div class="stat-card">
+                    <span class="label">NEXT PREDICTION</span>
+                    <div id="ai-value">--.--x</div>
+                </div>
+                <div class="stat-card">
+                    <span class="label">PROBABILITY</span>
+                    <div id="prob-value">0%</div>
+                </div>
             </div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
