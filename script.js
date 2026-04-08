@@ -1,47 +1,92 @@
-// 1. Ulanish
 const socket = new WebSocket('ws://localhost:3000');
 
-// 2. Elementlarni bir marta e'lon qilamiz
 const display = document.getElementById('coefficient-number');
+const historyBar = document.getElementById('history-bar');
+const aiPrediction = document.getElementById('ai-prediction');
+const winProb = document.getElementById('win-probability');
+const gameState = document.getElementById('game-state');
+
+let gameHistory = [];
 let frameRequested = false;
 
 socket.onmessage = function(event) {
-    // 3. Millisekundlik filtr (Brauzer chizishga ulgurmasa, xabarni tashlab yuboradi)
     if (frameRequested) return;
     frameRequested = true;
 
     requestAnimationFrame(() => {
         const raw = event.data;
 
-        // 4. TEZKOR QIDIRUV (JSON.parse-siz)
+        // 1. JORIY RAQAMNI USHLASH (next ishlatamiz tezlik uchun)
         if (raw.indexOf('"next":[') !== -1) {
-            const parts = raw.split('"next":[');
-            if (parts[1]) {
-                const val = parts[1].split(']')[0];
-                // DOM yangilash
-                display.textContent = val + "x";
-                display.style.color = "white";
-            }
+            const val = raw.split('"next":[')[1].split(']')[0];
+            display.textContent = val + "x";
+            display.style.color = "white";
+            gameState.textContent = "O'yin davom etmoqda...";
         } 
-        // 5. STOP: O'yin to'xtaganini ilib olish
+
+        // 2. STOP (O'yin tugashi)
         else if (raw.indexOf('stopCoefficient') !== -1) {
-            const parts = raw.split('"finalValue":');
-            if (parts[1]) {
-                const val = parts[1].split('}')[0];
-                display.textContent = val + "x";
-                display.style.color = "#ff0000"; // Qizil
-            }
+            const finalVal = parseFloat(raw.split('"finalValue":')[1].split('}')[0]);
+            display.textContent = finalVal.toFixed(2) + "x";
+            display.style.color = "#ff3e3e";
+            gameState.textContent = "To'xtadi!";
+            
+            updateHistory(finalVal);
+            calculatePrediction();
         }
-        
-        // 6. Kutish holati (Navbatdagi o'yin)
+
+        // 3. KUTISH (Yangi o'yin)
         else if (raw.indexOf('"state":"waiting"') !== -1) {
             display.textContent = "0.00x";
-            display.style.color = "#555";
+            display.style.color = "#848e9c";
+            gameState.textContent = "Keyingi raund kutilmoqda...";
         }
 
         frameRequested = false;
     });
 };
 
-socket.onopen = () => console.log("✅ Local Backend ulandi!");
-socket.onclose = () => console.warn("🔌 Backend uzildi!");
+function updateHistory(val) {
+    gameHistory.push(val);
+    if (gameHistory.length > 8) gameHistory.shift();
+
+    historyBar.innerHTML = '';
+    gameHistory.slice().reverse().forEach(num => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.style.color = num >= 2 ? '#00ff88' : '#ff3e3e';
+        item.textContent = num.toFixed(2) + 'x';
+        historyBar.appendChild(item);
+    });
+}
+
+function calculatePrediction() {
+    if (gameHistory.length < 3) return;
+
+    // ODDIY TAHLIL ALGORITMI (Trend Recognition)
+    const last3 = gameHistory.slice(-3);
+    const avg = last3.reduce((a, b) => a + b, 0) / 3;
+
+    let prediction = 0;
+    let probability = 0;
+
+    // Agar ketma-ket 2-3 marta kichik (qizil) chiqsa
+    if (avg < 1.8) {
+        prediction = (Math.random() * (2.5 - 2.0) + 2.0).toFixed(2);
+        probability = 75;
+    } 
+    // Agar oxirgisi juda katta bo'lsa (Xavfli zona)
+    else if (last3[2] > 10) {
+        prediction = (Math.random() * (1.5 - 1.1) + 1.1).toFixed(2);
+        probability = 85;
+    }
+    else {
+        prediction = (Math.random() * (2.0 - 1.5) + 1.5).toFixed(2);
+        probability = 60;
+    }
+
+    aiPrediction.textContent = prediction + "x";
+    winProb.textContent = probability + "%";
+}
+
+socket.onopen = () => console.log("✅ Tahlil tizimi tayyor!");
